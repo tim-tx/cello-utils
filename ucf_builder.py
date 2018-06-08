@@ -341,7 +341,87 @@ def add_standard_motif_library(ucf):
     raise NotImplementedError("Motif library not implemented.")    
 
 def add_toxicity(filename,ucf):
-    raise NotImplementedError("Toxicity not implemented.")    
+    ###############
+    # header keys #
+    ###############
+    S_CSV_GATE_NAME = "gate_name"
+    S_CSV_VARIABLE_NAME = "variable"
+    S_CSV_INPUT = "input"
+    S_CSV_GROWTH = "growth"
+        
+    ############
+    # ucf keys #
+    ############
+    S_UCF_COLLECTION = "collection"
+    S_UCF_TOXICITY = "gate_toxicity"
+    S_UCF_GATE_NAME = "gate_name"
+    S_UCF_VARIABLE_NAME = "maps_to_variable"
+    S_UCF_INPUT = "input"
+    S_UCF_GROWTH = "growth"
+    
+    reader = csv.reader(open(filename, 'r'), delimiter=',')
+    header = next(reader)
+    
+    header_keys_map = {}
+
+    expected = set([S_CSV_GATE_NAME,
+                    S_CSV_VARIABLE_NAME,
+                    S_CSV_INPUT,
+                    S_CSV_GROWTH])
+    for i,key in enumerate(header):
+        if key in expected:
+            if key == S_CSV_GATE_NAME:
+                header_keys_map[S_UCF_GATE_NAME] = i
+                expected.remove(S_CSV_GATE_NAME)
+            elif key == S_CSV_VARIABLE_NAME:
+                header_keys_map[S_UCF_VARIABLE_NAME] = i
+                expected.remove(S_CSV_VARIABLE_NAME)
+            elif key == S_CSV_INPUT:
+                header_keys_map[S_UCF_INPUT] = i
+                expected.remove(S_CSV_INPUT)
+            elif key == S_CSV_GROWTH:
+                header_keys_map[S_UCF_GROWTH] = i
+                expected.remove(S_CSV_GROWTH)
+        else:
+            raise RuntimeError("Unexpected header key in %s at position %d." % (filename,i))
+
+    toxicity = []
+
+    for row in reader:
+        if len(row) > 0:
+            collection = {}
+
+            gate_name = row[header_keys_map[S_UCF_GATE_NAME]]
+            variable = row[header_keys_map[S_UCF_VARIABLE_NAME]]
+            if len(gate_name) == 0:
+                raise RuntimeError("Gate name not specified.")
+            elif len(variable) == 0:
+                raise RuntimeError("Variable name not specified.")
+            else:
+                for c in toxicity:
+                    if c[S_UCF_GATE_NAME] == gate_name and c[S_UCF_VARIABLE_NAME] == variable:
+                        collection = c
+
+                if len(collection) == 0:
+                    collection[S_UCF_COLLECTION] = S_UCF_TOXICITY
+                    collection[S_UCF_GATE_NAME] = gate_name
+                    collection[S_UCF_VARIABLE_NAME] = variable
+                    collection[S_UCF_INPUT] = []
+                    collection[S_UCF_GROWTH] = []
+                    toxicity.append(collection)
+
+            input_value = row[header_keys_map[S_CSV_INPUT]]
+            if len(input_value) == 0:
+                raise RuntimeError("Input value not specified for '%s'." % input_value)
+            collection[S_UCF_INPUT].append(input_value)
+
+            growth_value = row[header_keys_map[S_CSV_GROWTH]]
+            if len(growth_value) == 0:
+                raise RuntimeError("Growth value not specified for '%s'." % gate_name)
+            collection[S_UCF_GROWTH].append(growth_value)
+
+    ucf += toxicity
+    return ucf
 
 def add_cytometry(filename,ucf):
     raise NotImplementedError("Cytometry not implemented.")    
