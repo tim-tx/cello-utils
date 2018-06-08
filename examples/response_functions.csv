@@ -1,0 +1,2 @@
+gate_name,equation,variable_name,off_threshold,on_threshold,parameter_name,value,parameter_name,value,parameter_name,value,parameter_name,value
+A1_AmtR,ymin+(ymax-ymin)/(1.0+(x/K)^n),x,0.071418036,0.917082477,ymax,3.8,ymin,0.06,K,0.07,n,1.6
