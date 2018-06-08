@@ -473,8 +473,7 @@ def main():
     if args.measurement_std:
         ucf = add_measurement_standard(args.measurement_std,ucf)
 
-
-    print(json.dumps(ucf,indent=4))
+    print(json.dumps(ucf,indent=2))
 
 if __name__ == "__main__":
     main()
