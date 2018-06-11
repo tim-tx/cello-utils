@@ -794,7 +794,7 @@ def add_measurement_plasmid(filename,ucf):
             collection = c
             break
 
-    if len(c) == 0:
+    if len(collection) == 0:
         collection = {S_UCF_COLLECTION: S_UCF_MEASUREMENT_STD}
         ucf.append(collection)
 
@@ -806,8 +806,61 @@ def add_measurement_plasmid(filename,ucf):
 
     return ucf
 
-def add_placement_rules(filename,ucf):
-    raise NotImplementedError("Placement rules not implemented.")    
+def add_part_placement_rules(filename,ucf):
+    ############
+    # ucf keys #
+    ############
+    S_UCF_COLLECTION = 'collection'
+    S_UCF_PLACEMENT_RULES = 'eugene_rules'
+    S_UCF_PART_PLACEMENT_RULES = 'eugene_part_rules'
+    S_UCF_GATE_PLACEMENT_RULES = 'eugene_gate_rules'
+
+    collection = {}
+
+    for c in ucf:
+        if c[S_UCF_COLLECTION] == S_UCF_PLACEMENT_RULES:
+            collection = c
+            break
+
+    if len(collection) == 0:
+        collection = {S_UCF_COLLECTION: S_UCF_PLACEMENT_RULES}
+        ucf.append(collection)
+
+    rules = []
+    with open(filename, 'r') as rulesfile:
+        rules = rulesfile.read().splitlines()
+
+    collection[S_UCF_PART_PLACEMENT_RULES] = rules
+
+    return ucf
+
+def add_gate_placement_rules(filename,ucf):
+    ############
+    # ucf keys #
+    ############
+    S_UCF_COLLECTION = 'collection'
+    S_UCF_PLACEMENT_RULES = 'eugene_rules'
+    S_UCF_PART_PLACEMENT_RULES = 'eugene_part_rules'
+    S_UCF_GATE_PLACEMENT_RULES = 'eugene_gate_rules'
+
+    collection = {}
+
+    for c in ucf:
+        if c[S_UCF_COLLECTION] == S_UCF_PLACEMENT_RULES:
+            collection = c
+            break
+
+    if len(collection) == 0:
+        collection = {S_UCF_COLLECTION: S_UCF_PLACEMENT_RULES}
+        ucf.append(collection)
+
+    rules = []
+    with open(filename, 'r') as rulesfile:
+        rules = rulesfile.read().splitlines()
+
+    collection[S_UCF_GATE_PLACEMENT_RULES] = rules
+
+    return ucf
 
 def main():
     parser = argparse.ArgumentParser(description="Build a UCF.")
@@ -828,7 +881,8 @@ def main():
     parser.add_argument("--parts", "-p", dest="parts", required=True, help="Parts CSV.", metavar="FILE")
     parser.add_argument("--toxicity", "-t", help="Toxicity input file.", metavar="FILE")
     parser.add_argument("--cytometry", "-c", help="Cytometry input file.", metavar="FILE")
-    parser.add_argument("--placement-rules", "-r", dest="placement_rules", help="Placement rules input file.", metavar="FILE")
+    parser.add_argument("--part-placement-rules", "-x", dest="part_placement_rules", help="Part placement rules input file.", metavar="FILE")
+    parser.add_argument("--gate-placement-rules", "-y", dest="gate_placement_rules", help="Gate placement rules input file.", metavar="FILE")
     args = parser.parse_args()
     
     ucf = []
@@ -852,8 +906,10 @@ def main():
         ucf = add_toxicity(args.toxicity,ucf)
     if args.cytometry:
         ucf = add_cytometry(args.cytometry,ucf)
-    if args.placement_rules:
-        ucf = add_placement_rules(args.placement_rules,ucf)
+    if args.part_placement_rules:
+        ucf = add_part_placement_rules(args.part_placement_rules,ucf)
+    if args.gate_placement_rules:
+        ucf = add_gate_placement_rules(args.gate_placement_rules,ucf)
 
     print(json.dumps(ucf,indent=2))
 
