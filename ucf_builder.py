@@ -376,7 +376,8 @@ def add_parts(filename,ucf):
                     collection[S_UCF_PART_NAME] = part_name
                     parts.append(collection)
                 else:
-                    raise RuntimeError("Part '%s' already specified." % part_name)
+                    warnings.warn("Part '%s' already specified, skipping." % part_name,RuntimeWarning)
+                    continue
 
             part_type = row[header_keys_map[S_CSV_PART_TYPE]]
             if len(part_type) == 0:
