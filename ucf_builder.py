@@ -338,7 +338,11 @@ def add_motif_library(filename,ucf):
     raise NotImplementedError("Motif library not implemented.")
 
 def add_standard_motif_library(ucf):
-    raise NotImplementedError("Motif library not implemented.")    
+    with open('std-motif.json', 'r') as jsonfile:
+        motif = json.load(jsonfile)
+
+    ucf += motif
+    return ucf
 
 def add_toxicity(filename,ucf):
     ###############
@@ -424,7 +428,111 @@ def add_toxicity(filename,ucf):
     return ucf
 
 def add_cytometry(filename,ucf):
-    raise NotImplementedError("Cytometry not implemented.")    
+    ###############
+    # header keys #
+    ###############
+    S_CSV_GATE_NAME = 'gate_name'
+    S_CSV_VARIABLE = 'variable'
+    S_CSV_INPUT = 'input'
+    S_CSV_OUTPUT_BIN = 'bin'
+    S_CSV_OUTPUT_COUNT = 'count'
+    
+    ############
+    # ucf keys #
+    ############
+    S_UCF_COLLECTION = 'collection'
+    S_UCF_CYTOMETRY = 'gate_cytometry'
+    S_UCF_GATE_NAME = 'gate_name'
+    S_UCF_VARIABLE = 'maps_to_variable'
+    S_UCF_INPUT = 'input'
+    S_UCF_OUTPUT_BIN = 'output_bins'
+    S_UCF_OUTPUT_COUNT = 'output_counts'
+    S_UCF_CYTOMETRY_DATA = 'cytometry_data'
+    
+    reader = csv.reader(open(filename, 'r'), delimiter=',')
+    header = next(reader)
+    
+    header_keys_map = {}
+
+    expected = set([S_CSV_GATE_NAME,
+                    S_CSV_VARIABLE,
+                    S_CSV_INPUT,
+                    S_CSV_OUTPUT_BIN,
+                    S_CSV_OUTPUT_COUNT])
+    for i,key in enumerate(header):
+        if key in expected:
+            if key == S_CSV_GATE_NAME:
+                header_keys_map[S_CSV_GATE_NAME] = i
+                expected.remove(S_CSV_GATE_NAME)
+            elif key == S_CSV_VARIABLE:
+                header_keys_map[S_CSV_VARIABLE] = i
+                expected.remove(S_CSV_VARIABLE)
+            elif key == S_CSV_INPUT:
+                header_keys_map[S_CSV_INPUT] = i
+                expected.remove(S_CSV_INPUT)
+            elif key == S_CSV_OUTPUT_BIN:
+                header_keys_map[S_CSV_OUTPUT_BIN] = i
+                expected.remove(S_CSV_OUTPUT_BIN)
+            elif key == S_CSV_OUTPUT_COUNT:
+                header_keys_map[S_CSV_OUTPUT_COUNT] = i
+                expected.remove(S_CSV_OUTPUT_COUNT)
+        else:
+            raise RuntimeError("Unexpected header key in %s at position %d." % (filename,i))
+
+    cytometry = []
+
+    for row in reader:
+        if len(row) > 0:
+            collection = {}
+
+            gate_name = row[header_keys_map[S_CSV_GATE_NAME]]
+            if len(gate_name) == 0:
+                raise RuntimeError("Gate name not specified.")
+            else:
+                for c in cytometry:
+                    if c[S_UCF_GATE_NAME] == gate_name:
+                        collection = c
+
+                if len(collection) == 0:
+                    collection[S_UCF_COLLECTION] = S_UCF_CYTOMETRY
+                    collection[S_UCF_GATE_NAME] = gate_name
+                    collection[S_UCF_CYTOMETRY_DATA] = []
+                    cytometry.append(collection)
+
+                variable = row[header_keys_map[S_CSV_VARIABLE]]
+                if len(variable) == 0:
+                    raise RuntimeError("'%s' name not specified." % S_CSV_VARIABLE )
+
+                cytometry_input = row[header_keys_map[S_CSV_INPUT]]
+                if len(cytometry_input) == 0:
+                    raise RuntimeError("'%s' name not specified." % S_CSV_INPUT)
+
+                output_bin = row[header_keys_map[S_CSV_OUTPUT_BIN]]
+                if len(output_bin) == 0:
+                    raise RuntimeError("'%s' name not specified." % S_CSV_OUTPUT_BIN)
+
+                output_count = row[header_keys_map[S_CSV_OUTPUT_COUNT]]
+                if len(output_count) == 0:
+                    raise RuntimeError("'%s' name not specified." % S_CSV_OUTPUT_COUNT)
+
+                data = {}
+                for obj in collection[S_UCF_CYTOMETRY_DATA]:
+                    if obj[S_UCF_VARIABLE] == variable and obj[S_UCF_INPUT] == float(cytometry_input):
+                        data = obj
+                        break
+
+                if len(data) == 0:
+                    collection[S_UCF_CYTOMETRY_DATA].append(data)
+                    data[S_UCF_VARIABLE] = variable
+                    data[S_UCF_INPUT] = float(cytometry_input)
+                    data[S_UCF_OUTPUT_BIN] = []
+                    data[S_UCF_OUTPUT_COUNT] = []
+                    
+                data[S_UCF_OUTPUT_BIN].append(float(output_bin))
+                data[S_UCF_OUTPUT_COUNT].append(float(output_count))
+                    
+    ucf += cytometry
+    return ucf
 
 def add_header(filename,ucf):
     raise NotImplementedError("Header not implemented.")    
