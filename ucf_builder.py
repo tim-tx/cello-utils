@@ -2,6 +2,7 @@ import csv
 import json
 import argparse
 import time
+import warnings
 
 __author__  = 'Timothy S. Jones <jonests@bu.edu>, Densmore Lab, BU'
 __license__ = 'GPL3'
@@ -90,7 +91,7 @@ def add_gate_parts(filename,ucf):
                         for c in cassettes:
                             if 'maps_to_variable' in c and c['maps_to_variable'] == variable:
                                 cassette = c
-                                raise RuntimeWarning("Variable %s already added to this gate. Skipping." % variable)
+                                warnings.warn("Variable %s already added to this gate. Skipping." % variable,RuntimeWarning)
 
                         if len(cassette) > 0:
                             continue
@@ -100,7 +101,7 @@ def add_gate_parts(filename,ucf):
                     cassette['maps_to_variable'] = variable
                     parts = []
                     if spec[S_CSV_PART] == 0:
-                        raise RuntimeWarning("No parts specified for %s, variable %s." % (name,variable))
+                        warnings.warn("No parts specified for %s, variable %s." % (name,variable),RuntimeWarning)
                     else:
                         for i in spec[S_CSV_PART]:
                             if len(row[i]) > 0:
@@ -567,7 +568,8 @@ def add_header(filename,ucf):
     reader = csv.reader(open(filename, 'r'), delimiter=',')
 
     collection = {S_UCF_COLLECTION: S_UCF_HEADER,
-                  S_UCF_AUTHOR: []}
+                  S_UCF_AUTHOR: [],
+                  S_UCF_DATE: time.strftime("%a %b %d %H:%M:%S %Z %Y", time.localtime())}
 
     for row in reader:
         key = row[0]
@@ -576,8 +578,8 @@ def add_header(filename,ucf):
             collection[S_UCF_DESCRIPTION] = value
         elif key == S_CSV_VERSION:
             collection[S_UCF_VERSION] = value
-        # elif key == S_CSV_DATE:
-        #     collection[S_UCF_DATE] = value
+        elif key == S_CSV_DATE:
+            collection[S_UCF_DATE] = value
         elif key == S_CSV_AUTHOR:
             collection[S_UCF_AUTHOR].append(value)
         elif key == S_CSV_ORGANISM:
@@ -591,15 +593,82 @@ def add_header(filename,ucf):
         elif key == S_CSV_GROWTH:
             collection[S_UCF_GROWTH] = value
         else:
-            raise RuntimeWarning("Unrecognized key '%s'" % key)
-
-        collection[S_UCF_DATE] = time.strftime("%a %b %d %H:%M:%S %Z %Y", time.localtime())
+            warnings.warn("Unrecognized key '%s'" % key,RuntimeWarning)
 
     ucf.append(collection)
     return ucf
     
 def add_measurement_standard(filename,ucf):
-    raise NotImplementedError("Measurement standard not implemented.")    
+    ###############
+    # header keys #
+    ###############
+    S_CSV_UNITS = 'signal_carrier_units'
+    S_CSV_NORMALIZATION = 'normalization_instructions'
+    S_CSV_DESCRIPTION = 'plasmid_description'
+
+    ############
+    # ucf keys #
+    ############
+    S_UCF_COLLECTION = 'collection'
+    S_UCF_MEASUREMENT_STD = 'measurement_std'
+    S_UCF_UNITS = 'signal_carrier_units'
+    S_UCF_NORMALIZATION = 'normalization_instructions'
+    S_UCF_DESCRIPTION = 'plasmid_description'
+    S_UCF_SEQUENCE = 'plasmid_sequence'
+
+    reader = csv.reader(open(filename, 'r'), delimiter=',')
+
+    collection = {}
+
+    for c in ucf:
+        if c[S_UCF_COLLECTION] == S_UCF_MEASUREMENT_STD:
+            collection = c
+            break
+
+    if len(collection) == 0:
+        collection = {S_UCF_COLLECTION: S_UCF_MEASUREMENT_STD}
+        ucf.append(collection)
+
+    for row in reader:
+        key = row[0]
+        value = row[1]
+        if key == S_CSV_UNITS:
+            collection[S_UCF_UNITS] = value
+        elif key == S_CSV_NORMALIZATION:
+            collection[S_UCF_NORMALIZATION] = value
+        elif key == S_CSV_DESCRIPTION:
+            collection[S_UCF_DESCRIPTION] = value
+        else:
+            warnings.warn("Unrecognized key '%s'" % key,RuntimeWarning)
+
+    return ucf
+
+def add_measurement_plasmid(filename,ucf):
+    ############
+    # ucf keys #
+    ############
+    S_UCF_COLLECTION = 'collection'
+    S_UCF_MEASUREMENT_STD = 'measurement_std'
+    S_UCF_SEQUENCE = 'plasmid_sequence'
+
+    collection = {}
+
+    for c in ucf:
+        if c[S_UCF_COLLECTION] == S_UCF_MEASUREMENT_STD:
+            collection = c
+            break
+
+    if len(c) == 0:
+        collection = {S_UCF_COLLECTION: S_UCF_MEASUREMENT_STD}
+        ucf.append(collection)
+
+    plasmid_sequence = []
+    with open(filename, 'r') as plasmidfile:
+        plasmid_sequence = plasmidfile.read().splitlines()
+
+    collection[S_UCF_SEQUENCE] = plasmid_sequence
+
+    return ucf
 
 def add_logic_constraints(filename,ucf):
     raise NotImplementedError("Logic constraints not implemented.")    
@@ -610,13 +679,16 @@ def add_placement_rules(filename,ucf):
 def main():
     parser = argparse.ArgumentParser(description="Build a UCF.")
     parser.add_argument("--header", "-e", required=True, help="Header input CSV.", metavar="FILE")
-    parser.add_argument("--measurement-std", "-s", dest="measurement_std", help="Measurement standard input file.", metavar="FILE")
+
+    parser.add_argument("--measurement-std", "-s", dest="measurement_std", help="Measurement standard CSV.", metavar="FILE")
+    parser.add_argument("--measurement-plasmid", "-i", dest="measurement_plasmid", help="Measurement standard plasmid.", metavar="FILE")
+
     parser.add_argument("--logic-constraints", "-l", dest="logic_constraints", help="Measurement standard input file.", metavar="FILE")
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--motif-library", "-m", dest="motif_library", help="Motif library input file.", metavar="FILE")
     group.add_argument("--std-motif-library", dest="std_motif_library", help="Use the standard motif library.", action='store_true')
-
+    
     parser.add_argument("--gate-parts", "-g", dest="gate_parts", required=True, help="Gate parts CSV.", metavar="FILE")
     parser.add_argument("--response-functions", "-f", dest="response_functions", required=True, help="Response functions CSV.", metavar="FILE")
     parser.add_argument("--parts", "-p", dest="parts", required=True, help="Parts CSV.", metavar="FILE")
@@ -628,6 +700,10 @@ def main():
     ucf = []
     if args.header:
         ucf = add_header(args.header,ucf)
+    if args.measurement_std:
+        ucf = add_measurement_standard(args.measurement_std,ucf)
+    if args.measurement_plasmid:
+        ucf = add_measurement_plasmid(args.measurement_plasmid,ucf)
     if args.motif_library:
         ucf = add_motif_library(args.motif_library,ucf)
     if args.std_motif_library:
@@ -641,8 +717,6 @@ def main():
         ucf = add_cytometry(args.cytometry,ucf)
     if args.placement_rules:
         ucf = add_placement_rules(args.placement_rules,ucf)
-    if args.measurement_std:
-        ucf = add_measurement_standard(args.measurement_std,ucf)
 
     print(json.dumps(ucf,indent=2))
 
