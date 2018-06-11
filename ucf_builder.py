@@ -555,12 +555,12 @@ def add_toxicity(filename,ucf):
             input_value = row[header_keys_map[S_CSV_INPUT]]
             if len(input_value) == 0:
                 raise RuntimeError("Input value not specified for '%s'." % input_value)
-            collection[S_UCF_INPUT].append(input_value)
+            collection[S_UCF_INPUT].append(float(input_value))
 
             growth_value = row[header_keys_map[S_CSV_GROWTH]]
             if len(growth_value) == 0:
                 raise RuntimeError("Growth value not specified for '%s'." % gate_name)
-            collection[S_UCF_GROWTH].append(growth_value)
+            collection[S_UCF_GROWTH].append(float(growth_value))
 
     ucf += toxicity
     return ucf
