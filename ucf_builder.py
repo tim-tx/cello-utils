@@ -7,6 +7,61 @@ import warnings
 __author__  = 'Timothy S. Jones <jonests@bu.edu>, Densmore Lab, BU'
 __license__ = 'GPL3'
 
+def add_logic_constraints(filename,ucf):
+    ###############
+    # header keys #
+    ###############
+    S_CSV_TYPE = 'type'
+    S_CSV_MAX_INSTANCES = 'max_instances'
+    
+    ############
+    # ucf keys #
+    ############
+    S_UCF_COLLECTION = 'collection'
+    S_UCF_LOGIC_CONTRAINTS = 'logic_constraints'
+    S_UCF_TYPE = 'type'
+    S_UCF_MAX_INSTANCES = 'max_instances'
+    S_UCF_AVAILABLE_GATES = 'available_gates'
+    
+    reader = csv.reader(open(filename, 'r'), delimiter=',')
+    header = next(reader)
+    
+    header_keys_map = {}
+
+    expected = set([S_CSV_TYPE,
+                    S_CSV_MAX_INSTANCES])
+    for i,key in enumerate(header):
+        if key in expected:
+            if key == S_CSV_TYPE:
+                header_keys_map[S_CSV_TYPE] = i
+                expected.remove(S_CSV_TYPE)
+            elif key == S_CSV_MAX_INSTANCES:
+                header_keys_map[S_CSV_MAX_INSTANCES] = i
+                expected.remove(S_CSV_MAX_INSTANCES)
+        else:
+            raise RuntimeError("Unexpected header key in %s at position %d." % (filename,i))
+
+    collection = {S_UCF_COLLECTION: S_UCF_LOGIC_CONTRAINTS,
+                  S_UCF_AVAILABLE_GATES: []}
+
+    for row in reader:
+        if len(row) > 0:
+            constraint_type = row[header_keys_map[S_CSV_TYPE]]
+            if len(constraint_type) == 0:
+                raise RuntimeError("'%s' not specified." % S_CSV_TYPE)
+
+            max_instances = row[header_keys_map[S_CSV_MAX_INSTANCES]]
+            if len(max_instances) == 0:
+                raise RuntimeError("'%s' not specified." % S_CSV_MAX_INSTANCES)
+
+            constraint = {S_UCF_TYPE: constraint_type,
+                          S_UCF_MAX_INSTANCES: max_instances}
+
+            collection[S_UCF_AVAILABLE_GATES].append(constraint)
+                    
+    ucf.append(collection)
+    return ucf
+
 def add_gate_parts(filename,ucf):
     ###############
     # header keys #
@@ -670,9 +725,6 @@ def add_measurement_plasmid(filename,ucf):
 
     return ucf
 
-def add_logic_constraints(filename,ucf):
-    raise NotImplementedError("Logic constraints not implemented.")    
-
 def add_placement_rules(filename,ucf):
     raise NotImplementedError("Placement rules not implemented.")    
 
@@ -704,6 +756,8 @@ def main():
         ucf = add_measurement_standard(args.measurement_std,ucf)
     if args.measurement_plasmid:
         ucf = add_measurement_plasmid(args.measurement_plasmid,ucf)
+    if args.logic_constraints:
+        ucf = add_logic_constraints(args.logic_constraints,ucf)
     if args.motif_library:
         ucf = add_motif_library(args.motif_library,ucf)
     if args.std_motif_library:
