@@ -1,6 +1,7 @@
 import csv
 import json
 import argparse
+import time
 
 __author__  = 'Timothy S. Jones <jonests@bu.edu>, Densmore Lab, BU'
 __license__ = 'GPL3'
@@ -535,8 +536,68 @@ def add_cytometry(filename,ucf):
     return ucf
 
 def add_header(filename,ucf):
-    raise NotImplementedError("Header not implemented.")    
+    ###############
+    # header keys #
+    ###############
+    S_CSV_DESCRIPTION = 'description'
+    S_CSV_VERSION = 'version'
+    S_CSV_DATE = 'date'
+    S_CSV_AUTHOR = 'author'
+    S_CSV_ORGANISM = 'organism'
+    S_CSV_GENOME = 'genome'
+    S_CSV_MEDIA = 'media'
+    S_CSV_TEMPERATURE = 'temperature'
+    S_CSV_GROWTH = 'growth'
 
+    ############
+    # ucf keys #
+    ############
+    S_UCF_COLLECTION = 'collection'
+    S_UCF_HEADER = 'header'
+    S_UCF_DESCRIPTION = 'description'
+    S_UCF_VERSION = 'version'
+    S_UCF_DATE = 'date'
+    S_UCF_AUTHOR = 'author'
+    S_UCF_ORGANISM = 'organism'
+    S_UCF_GENOME = 'genome'
+    S_UCF_MEDIA = 'media'
+    S_UCF_TEMPERATURE = 'temperature'
+    S_UCF_GROWTH = 'growth'
+
+    reader = csv.reader(open(filename, 'r'), delimiter=',')
+
+    collection = {S_UCF_COLLECTION: S_UCF_HEADER,
+                  S_UCF_AUTHOR: []}
+
+    for row in reader:
+        key = row[0]
+        value = row[1]
+        if key == S_CSV_DESCRIPTION:
+            collection[S_UCF_DESCRIPTION] = value
+        elif key == S_CSV_VERSION:
+            collection[S_UCF_VERSION] = value
+        # elif key == S_CSV_DATE:
+        #     collection[S_UCF_DATE] = value
+        elif key == S_CSV_AUTHOR:
+            collection[S_UCF_AUTHOR].append(value)
+        elif key == S_CSV_ORGANISM:
+            collection[S_UCF_ORGANISM] = value
+        elif key == S_CSV_GENOME:
+            collection[S_UCF_GENOME] = value
+        elif key == S_CSV_MEDIA:
+            collection[S_UCF_MEDIA] = value
+        elif key == S_CSV_TEMPERATURE:
+            collection[S_UCF_TEMPERATURE] = value
+        elif key == S_CSV_GROWTH:
+            collection[S_UCF_GROWTH] = value
+        else:
+            raise RuntimeWarning("Unrecognized key '%s'" % key)
+
+        collection[S_UCF_DATE] = time.strftime("%a %b %d %H:%M:%S %Z %Y", time.localtime())
+
+    ucf.append(collection)
+    return ucf
+    
 def add_measurement_standard(filename,ucf):
     raise NotImplementedError("Measurement standard not implemented.")    
 
@@ -548,23 +609,25 @@ def add_placement_rules(filename,ucf):
 
 def main():
     parser = argparse.ArgumentParser(description="Build a UCF.")
-    parser.add_argument("--gate-parts", "-g", dest="gate_parts", required=True, help="Gate parts CSV.", metavar="FILE")
-    parser.add_argument("--response-functions", "-f", dest="response_functions", required=True, help="Response functions CSV.", metavar="FILE")
-    parser.add_argument("--parts", "-p", dest="parts", required=True, help="Parts CSV.", metavar="FILE")
-    
+    parser.add_argument("--header", "-e", required=True, help="Header input CSV.", metavar="FILE")
+    parser.add_argument("--measurement-std", "-s", dest="measurement_std", help="Measurement standard input file.", metavar="FILE")
+    parser.add_argument("--logic-constraints", "-l", dest="logic_constraints", help="Measurement standard input file.", metavar="FILE")
+
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--motif-library", "-m", dest="motif_library", help="Motif library input file.", metavar="FILE")
     group.add_argument("--std-motif-library", dest="std_motif_library", help="Use the standard motif library.", action='store_true')
-    
+
+    parser.add_argument("--gate-parts", "-g", dest="gate_parts", required=True, help="Gate parts CSV.", metavar="FILE")
+    parser.add_argument("--response-functions", "-f", dest="response_functions", required=True, help="Response functions CSV.", metavar="FILE")
+    parser.add_argument("--parts", "-p", dest="parts", required=True, help="Parts CSV.", metavar="FILE")
     parser.add_argument("--toxicity", "-t", help="Toxicity input file.", metavar="FILE")
     parser.add_argument("--cytometry", "-c", help="Cytometry input file.", metavar="FILE")
-    parser.add_argument("--header", "-e", help="Header input file.", metavar="FILE")
-    parser.add_argument("--measurement-std", "-s", dest="measurement_std", help="Measurement standard input file.", metavar="FILE")
-    parser.add_argument("--logic-constraints", "-l", dest="logic_constraints", help="Measurement standard input file.", metavar="FILE")
     parser.add_argument("--placement-rules", "-r", dest="placement_rules", help="Placement rules input file.", metavar="FILE")
     args = parser.parse_args()
     
     ucf = []
+    if args.header:
+        ucf = add_header(args.header,ucf)
     if args.motif_library:
         ucf = add_motif_library(args.motif_library,ucf)
     if args.std_motif_library:
