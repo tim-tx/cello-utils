@@ -7,6 +7,86 @@ import warnings
 __author__  = 'Timothy S. Jones <jonests@bu.edu>, Densmore Lab, BU'
 __license__ = 'GPL3'
 
+def add_gates(filename,ucf):
+    ###############
+    # header keys #
+    ###############
+    S_CSV_REGULATOR = 'regulator'
+    S_CSV_GROUP_NAME = 'group_name'
+    S_CSV_GATE_NAME = 'gate_name'
+    S_CSV_GATE_TYPE = 'gate_type'
+    S_CSV_SYSTEM = 'system'
+    S_CSV_COLOR_HEXCODE = 'color_hexcode'
+
+    ############
+    # ucf keys #
+    ############
+    S_UCF_COLLECTION = 'collection'
+    S_UCF_GATES = 'gates'
+    S_UCF_REGULATOR = 'regulator'
+    S_UCF_GROUP_NAME = 'group_name'
+    S_UCF_GATE_NAME = 'gate_name'
+    S_UCF_GATE_TYPE = 'gate_type'
+    S_UCF_SYSTEM = 'system'
+    S_UCF_COLOR_HEXCODE = 'color_hexcode'
+
+    reader = csv.reader(open(filename, 'r'), delimiter=',')
+    header = next(reader)
+    
+    header_keys_map = {}
+
+    expected = set([S_CSV_REGULATOR,
+                    S_CSV_GROUP_NAME,
+                    S_CSV_GATE_NAME,
+                    S_CSV_GATE_TYPE,
+                    S_CSV_SYSTEM,
+                    S_CSV_COLOR_HEXCODE])
+    for i,key in enumerate(header):
+        if key in expected:
+            if key == S_CSV_REGULATOR:
+                header_keys_map[S_CSV_REGULATOR] = i
+                expected.remove(S_CSV_REGULATOR)
+            elif key == S_CSV_GROUP_NAME:
+                header_keys_map[S_CSV_GROUP_NAME] = i
+                expected.remove(S_CSV_GROUP_NAME)
+            elif key == S_CSV_GATE_NAME:
+                header_keys_map[S_CSV_GATE_NAME] = i
+                expected.remove(S_CSV_GATE_NAME)
+            elif key == S_CSV_GATE_TYPE:
+                header_keys_map[S_CSV_GATE_TYPE] = i
+                expected.remove(S_CSV_GATE_TYPE)
+            elif key == S_CSV_SYSTEM:
+                header_keys_map[S_CSV_SYSTEM] = i
+                expected.remove(S_CSV_SYSTEM)
+            elif key == S_CSV_COLOR_HEXCODE:
+                header_keys_map[S_CSV_COLOR_HEXCODE] = i
+                expected.remove(S_CSV_COLOR_HEXCODE)
+        else:
+            raise RuntimeError("Unexpected header key in %s at position %d." % (filename,i))
+        
+    gates = []
+
+    for row in reader:
+        regulator = row[header_keys_map[S_CSV_REGULATOR]]
+        group_name = row[header_keys_map[S_CSV_GROUP_NAME]]
+        gate_name = row[header_keys_map[S_CSV_GATE_NAME]]
+        gate_type = row[header_keys_map[S_CSV_GATE_TYPE]]
+        system = row[header_keys_map[S_CSV_SYSTEM]]
+        color_hexcode = row[header_keys_map[S_CSV_COLOR_HEXCODE]]
+
+        collection = {S_UCF_COLLECTION: S_UCF_GATES,
+                      S_UCF_REGULATOR: regulator,
+                      S_UCF_GROUP_NAME: group_name,
+                      S_UCF_GATE_NAME: gate_name,
+                      S_UCF_GATE_TYPE: gate_type,
+                      S_UCF_SYSTEM: system,
+                      S_UCF_COLOR_HEXCODE: color_hexcode}
+
+        gates.append(collection)
+
+    ucf += gates
+    return ucf
+
 def add_logic_constraints(filename,ucf):
     ###############
     # header keys #
@@ -742,8 +822,9 @@ def main():
     group.add_argument("--motif-library", "-m", dest="motif_library", help="Motif library input file.", metavar="FILE")
     group.add_argument("--std-motif-library", dest="std_motif_library", help="Use the standard motif library.", action='store_true')
     
-    parser.add_argument("--gate-parts", "-g", dest="gate_parts", required=True, help="Gate parts CSV.", metavar="FILE")
+    parser.add_argument("--gates", "-g", required=True, help="Gates CSV.", metavar="FILE")
     parser.add_argument("--response-functions", "-f", dest="response_functions", required=True, help="Response functions CSV.", metavar="FILE")
+    parser.add_argument("--gate-parts", "-a", dest="gate_parts", required=True, help="Gate parts CSV.", metavar="FILE")
     parser.add_argument("--parts", "-p", dest="parts", required=True, help="Parts CSV.", metavar="FILE")
     parser.add_argument("--toxicity", "-t", help="Toxicity input file.", metavar="FILE")
     parser.add_argument("--cytometry", "-c", help="Cytometry input file.", metavar="FILE")
@@ -763,8 +844,9 @@ def main():
         ucf = add_motif_library(args.motif_library,ucf)
     if args.std_motif_library:
         ucf = add_standard_motif_library(ucf)
-    ucf = add_gate_parts(args.gate_parts,ucf)
+    ucf = add_gates(args.gates,ucf)
     ucf = add_response_functions(args.response_functions,ucf)
+    ucf = add_gate_parts(args.gate_parts,ucf)
     ucf = add_parts(args.parts,ucf)
     if args.toxicity:
         ucf = add_toxicity(args.toxicity,ucf)
