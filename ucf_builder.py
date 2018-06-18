@@ -862,6 +862,110 @@ def add_gate_placement_rules(filename,ucf):
 
     return ucf
 
+def add_genetic_locations_files(filename,name,ucf):
+    ############
+    # ucf keys #
+    ############
+    S_UCF_COLLECTION = 'collection'
+    S_UCF_GENETIC_LOCATIONS = 'genetic_locations'
+    S_UCF_LOCATIONS = 'locations'
+    S_UCF_FILE = 'file'
+    S_UCF_NAME = 'name'
+
+    collection = {}
+
+    for c in ucf:
+        if c[S_UCF_COLLECTION] == S_UCF_GENETIC_LOCATIONS:
+            collection = c
+            break
+
+    if len(collection) == 0:
+        collection = {S_UCF_COLLECTION: S_UCF_GENETIC_LOCATIONS,
+                      S_UCF_LOCATIONS: []}
+        ucf.append(collection)
+
+    locations = collection[S_UCF_LOCATIONS]
+    with open(filename, 'r') as locfile:
+        locations.append({S_UCF_FILE: locfile.read().splitlines(),
+                          S_UCF_NAME: name})
+
+    return ucf
+
+def add_genetic_locations(filename,ucf):
+    ###############
+    # header keys #
+    ###############
+    S_CSV_SENSOR_MOD_NAME = 'sensor_module_location_name'
+    S_CSV_SENSOR_MOD_START = 'sensor_module_bp_start'
+    S_CSV_SENSOR_MOD_END = 'sensor_module_bp_end'
+    S_CSV_CIRCUIT_MOD_NAME = 'circuit_module_location_name'
+    S_CSV_CIRCUIT_MOD_START = 'circuit_module_bp_start'
+    S_CSV_CIRCUIT_MOD_END = 'circuit_module_bp_end'
+    S_CSV_OUTPUT_MOD_NAME = 'output_module_location_name'
+    S_CSV_OUTPUT_MOD_START = 'output_module_bp_start'
+    S_CSV_OUTPUT_MOD_END = 'output_module_bp_end'
+    S_CSV_OUTPUT_MOD_UNIT = 'output_module_unit_conversion'
+    
+    ############
+    # ucf keys #
+    ############
+    S_UCF_COLLECTION = 'collection'
+    S_UCF_GENETIC_LOCATIONS = 'genetic_locations'
+    S_UCF_LOCATION_NAME = 'location_name'
+    S_UCF_SENSOR_MODULE_LOC = 'sensor_module_location'
+    S_UCF_CIRCUIT_MODULE_LOC = 'circuit_module_location'
+    S_UCF_OUTPUT_MODULE_LOC = 'output_module_location'
+    S_UCF_BP_START = 'bp_start'
+    S_UCF_BP_END = 'bp_end'
+    S_UCF_UNIT_CONVERSION = 'unit_conversion'
+    
+    reader = csv.reader(open(filename, 'r'), delimiter=',')
+
+    collection = {}
+
+    for c in ucf:
+        if c[S_UCF_COLLECTION] == S_UCF_GENETIC_LOCATIONS:
+            collection = c
+            break
+
+    if len(collection) == 0:
+        collection = {S_UCF_COLLECTION: S_UCF_GENETIC_LOCATIONS}
+        ucf.append(collection)
+
+    sens = collection[S_UCF_SENSOR_MODULE_LOC] = [{}]
+    circ = collection[S_UCF_CIRCUIT_MODULE_LOC] = [{}]
+    out = collection[S_UCF_OUTPUT_MODULE_LOC] = [{}]
+
+    for row in reader:
+        if len(row) > 0:
+            key = row[0]
+            value = row[1]
+            if key == S_CSV_SENSOR_MOD_NAME:
+                sens[-1][S_UCF_LOCATION_NAME] = value
+            elif key == S_CSV_SENSOR_MOD_START:
+                sens[-1][S_UCF_BP_START] = int(value)
+            elif key == S_CSV_SENSOR_MOD_END:
+                sens[-1][S_UCF_BP_END] = int(value)
+            elif key == S_CSV_CIRCUIT_MOD_NAME:
+                circ[-1][S_UCF_LOCATION_NAME] = value
+            elif key == S_CSV_CIRCUIT_MOD_START:
+                circ[-1][S_UCF_BP_START] = int(value)
+            elif key == S_CSV_CIRCUIT_MOD_END:
+                circ[-1][S_UCF_BP_END] = int(value)
+            elif key == S_CSV_OUTPUT_MOD_NAME:
+                out[-1][S_UCF_LOCATION_NAME] = value
+            elif key == S_CSV_OUTPUT_MOD_START:
+                out[-1][S_UCF_BP_START] = int(value)
+            elif key == S_CSV_OUTPUT_MOD_END:
+                out[-1][S_UCF_BP_END] = int(value)
+            elif key == S_CSV_OUTPUT_MOD_UNIT:
+                out[-1][S_UCF_UNIT_CONVERSION] = float(value)
+            else:
+                warnings.warn("Unrecognized key '%s'" % key,RuntimeWarning)
+
+    ucf.append(collection)
+    return ucf
+
 def main():
     parser = argparse.ArgumentParser(description="Build a UCF.")
     parser.add_argument("--header", "-e", required=True, help="Header input CSV.", metavar="FILE")
@@ -883,7 +987,20 @@ def main():
     parser.add_argument("--cytometry", "-c", help="Cytometry input file.", metavar="FILE")
     parser.add_argument("--part-placement-rules", "-x", dest="part_placement_rules", help="Part placement rules input file.", metavar="FILE")
     parser.add_argument("--gate-placement-rules", "-y", dest="gate_placement_rules", help="Gate placement rules input file.", metavar="FILE")
+
+    group = parser.add_argument_group('genetic locations')
+    group.add_argument("--genetic-locations-name", "-n", dest="genetic_locations_name", action='append', help="Genetic locations annotation name.", metavar="STRING")
+    group.add_argument("--genetic-locations-file", "-o", dest="genetic_locations_file", action='append', help="Genetic locations input file.", metavar="FILE")
+    group.add_argument("--genetic-locations", "-q", dest="genetic_locations", help="Genetic locations settings CSV.")
     args = parser.parse_args()
+    
+    if args.genetic_locations_name and args.genetic_locations_file is None:
+        parser.error("--genetic-locations-name requires --genetic-locations-file.")
+    elif args.genetic_locations_file and args.genetic_locations_name is None:
+        parser.error("--genetic-locations-file requires --genetic-locations-name.")
+    elif args.genetic_locations_name and args.genetic_locations_file \
+         and len(args.genetic_locations_name) != len(args.genetic_locations_file):
+        parser.error("Every specification of --genetic-locations-name requires an accompanying --genetic-locations-file.")
     
     ucf = []
     if args.header:
@@ -910,6 +1027,11 @@ def main():
         ucf = add_part_placement_rules(args.part_placement_rules,ucf)
     if args.gate_placement_rules:
         ucf = add_gate_placement_rules(args.gate_placement_rules,ucf)
+    if args.genetic_locations_name:
+        for (name,filename) in zip(args.genetic_locations_name,args.genetic_locations_file):
+            ucf = add_genetic_locations_files(filename,name,ucf)
+    if args.genetic_locations:
+        ucf = add_genetic_locations(args.genetic_locations,ucf)
 
     print(json.dumps(ucf,indent=2))
 

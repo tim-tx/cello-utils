@@ -1,0 +1,10 @@
+sensor_module_location_name,pAN1201
+sensor_module_bp_start,560
+sensor_module_bp_end,560
+circuit_module_location_name,pAN1201
+circuit_module_bp_start,54
+circuit_module_bp_end,560
+output_module_location_name,pAN4020
+output_module_bp_start,953
+output_module_unit_conversion,0.4
+output_module_bp_end,953
