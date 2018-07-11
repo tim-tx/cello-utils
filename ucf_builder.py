@@ -147,18 +147,26 @@ def add_gate_parts(filename,ucf):
     # header keys #
     ###############
     S_CSV_GATE_NAME = "gate_name"
-    S_CSV_PROMOTER = "promoter"
+    S_CSV_PROMOTER = "regulates"
     S_CSV_VARIABLE = "variable"
     S_CSV_PART = "part"
+    S_CSV_REG_PART = "reg_part"
 
     S_CASSETTES = "cassettes"
-
+    S_REGULATORY_PARTS = "regulatory_parts"
+    
+    ############
+    # ucf keys #
+    ############
+    S_UCF_REGULATES = "regulates"
+    S_UCF_REGULATORY_PARTS = "regulatory_parts"
+    
     reader = csv.reader(open(filename, 'r'), delimiter=',')
     header = next(reader)
     
-    header_keys = {S_CASSETTES:[]}
+    header_keys = {S_CASSETTES:[],S_REGULATORY_PARTS:[]}
 
-    expected = set([S_CSV_GATE_NAME,S_CSV_PROMOTER,S_CSV_VARIABLE])
+    expected = set([S_CSV_GATE_NAME,S_CSV_PROMOTER,S_CSV_VARIABLE,S_CSV_REG_PART])
     variable = ""
     for i,key in enumerate(header):
         if key in expected:
@@ -168,10 +176,14 @@ def add_gate_parts(filename,ucf):
             elif key == S_CSV_PROMOTER:
                 header_keys[S_CSV_PROMOTER] = i
                 expected.remove(S_CSV_PROMOTER)
+            elif key == S_CSV_REG_PART:
+                header_keys[S_REGULATORY_PARTS].append(i)
             elif key == S_CSV_VARIABLE:
                 cassette = {S_CSV_VARIABLE:i,S_CSV_PART:[]}
                 header_keys[S_CASSETTES].append(cassette)
                 expected.add(S_CSV_PART)
+                if S_CSV_REG_PART in expected:
+                    expected.remove(S_CSV_REG_PART)
             elif key == S_CSV_PART:
                 cassette = header_keys[S_CASSETTES][-1]
                 cassette[S_CSV_PART].append(i)
@@ -247,8 +259,18 @@ def add_gate_parts(filename,ucf):
             ############
             # promoter #
             ############
-            collection['promoter'] = row[header_keys[S_CSV_PROMOTER]]
+            collection[S_UCF_REGULATES] = row[header_keys[S_CSV_PROMOTER]]
 
+            ####################
+            # regulatory parts #
+            ####################
+            reg_parts = header_keys[S_REGULATORY_PARTS]
+            collection[S_UCF_REGULATORY_PARTS] = []
+            for spec in reg_parts:
+                if len(variable) == 0:
+                    continue
+                collection[S_UCF_REGULATORY_PARTS].append(row[spec])
+            
     ucf += gate_parts
     return ucf
 
