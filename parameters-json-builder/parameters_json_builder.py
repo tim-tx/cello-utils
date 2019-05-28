@@ -20,10 +20,11 @@ with open(app_config_file,"r") as config_json:
 
 stages = [x["name"] for x in config["stages"]]
 
-applications = []
+root = {}
 params = []
 application = {"name":config["name"],"stages":params}
 applications = [application,]
+root['applications'] = applications
 
 for stage in stages:
     stage_params = {}
@@ -41,4 +42,4 @@ for stage in stages:
             stage_params["algorithms"].append(algorithm_params)
         
 
-print(json.dumps(applications,indent=2))
+print(json.dumps(root,indent=2))
